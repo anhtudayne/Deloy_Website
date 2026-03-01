@@ -132,3 +132,10 @@ Dự án được phát triển bởi team **F4**.
   <p>Được tạo ra với ❤️ cho tương lai của ngành Logistics.</p>
   <p>© 2026 F4 Team. All rights reserved.</p>
 </div>
+
+---
+## Project Setup Notes (CoffatDev)
+- **Client**: React 19 + TypeScript + Vite + TailwindCSS
+- **Server**: Node.js + Express + Prisma + PostgreSQL
+- **Auth**: JWT-based authentication with RBAC
+- **State**: Zustand for global client state
