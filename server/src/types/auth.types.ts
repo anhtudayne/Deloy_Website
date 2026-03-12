@@ -52,3 +52,13 @@ export enum RoleName {
   MANAGER = "Manager",
   STAFF = "Warehouse Staff",
 }
+
+/**
+ * @coffatdev Auth Type Reference
+ *
+ * 3-layer Proxy Guard flow:
+ *   authenticateToken → authorizeRoles → authorizeWarehouseAccess
+ *
+ * RoleName enum maps directly to Prisma Role.name values.
+ * JwtPayload is attached to req.user after token verification.
+ */
