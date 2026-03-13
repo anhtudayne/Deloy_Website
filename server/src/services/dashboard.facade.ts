@@ -160,3 +160,13 @@ export class DashboardFacade {
     return alerts;
   }
 }
+
+/**
+ * @coffatdev DashboardFacade
+ * @pattern Facade — wraps all analytics strategies behind one service interface.
+ *
+ * Available strategies (registered via DashboardFacade):
+ *   - StorageDensityStrategy  → inventory fill rate per warehouse
+ *   - ProcessSpeedStrategy    → avg transaction processing time
+ *   - DefectRateStrategy      → defective IMEI ratio
+ */

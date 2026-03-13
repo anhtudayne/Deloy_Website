@@ -83,3 +83,12 @@ export class StorageDensityStrategy implements HealthCalculationStrategy {
     };
   }
 }
+
+/**
+ * @coffatdev DashboardStrategy
+ * @pattern Strategy — each concrete class computes one analytics metric.
+ *
+ * To add a new metric:
+ *   1. Implement HealthCalculationStrategy
+ *   2. Register in DashboardFacade.getHealth()
+ */
