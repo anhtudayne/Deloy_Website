@@ -1,0 +1,19 @@
+# Development stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies (only required for node-gyp etc., alpine is small)
+RUN apk add --no-cache python3 make g++
+
+COPY package*.json ./
+RUN npm install
+
+# Copy source code (though it will be overridden by bind mount in docker-compose)
+COPY . .
+
+# Expose Vite's default dev port
+EXPOSE 5173
+
+# Start Vite with --host to allow external access (Docker)
+CMD ["npm", "run", "dev", "--", "--host"]
