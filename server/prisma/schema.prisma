@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(50)
+  description String?  @db.VarChar(255)
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id             Int              @id @default(autoincrement())
+  role_id        Int?
+  full_name      String           @db.VarChar(100)
+  username       String           @unique @db.VarChar(50)
+  email          String           @unique @db.VarChar(100)
+  password_hash  String           @db.VarChar(255)
+  status         UserStatus       @default(ACTIVE)
+  created_at     DateTime         @default(now())
+  role           Role?            @relation(fields: [role_id], references: [id])
+  warehouses     UserWarehouse[]
+  transactions   Transaction[]
+  confirmed_transactions Transaction[] @relation("Confirmer")
+
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+
+model Warehouse {
+  id          Int              @id @default(autoincrement())
+  name        String           @db.VarChar(100)
+  address     String?          @db.Text
+  capacity    Int?
+  users       UserWarehouse[]
+  inventory   Inventory[]
+  product_items ProductItem[]
+  source_transactions Transaction[] @relation("SourceWarehouse")
+  dest_transactions   Transaction[] @relation("DestWarehouse")
+
+  @@map("warehouses")
+}
+
+model UserWarehouse {
+  user_id      Int
+  warehouse_id Int
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  warehouse    Warehouse @relation(fields: [warehouse_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, warehouse_id])
+  @@map("user_warehouse")
+}
+
+model Category {
+  id         Int        @id @default(autoincrement())
+  name       String     @db.VarChar(100)
+  parent_id  Int?
+  parent     Category?  @relation("CategoryToCategory", fields: [parent_id], references: [id])
+  children   Category[] @relation("CategoryToCategory")
+  products   Product[]
+
+  @@map("categories")
+}
+
+model Supplier {
+  id           Int       @id @default(autoincrement())
+  company_name String    @db.VarChar(150)
+  phone        String?   @db.VarChar(20)
+  address      String?   @db.Text
+  email        String?   @db.VarChar(100)
+  transactions Transaction[]
+
+  @@map("suppliers")
+}
+
+model Customer {
+  id            Int             @id @default(autoincrement())
+  full_name     String          @db.VarChar(100)
+  phone         String          @unique @db.VarChar(20)
+  email         String?         @unique @db.VarChar(100)
+  address       String?         @db.Text
+  customer_type CustomerType
+  created_at    DateTime        @default(now())
+  transactions  Transaction[]
+
+  @@map("customers")
+}
+
+enum CustomerType {
+  RETAIL
+  WHOLESALE
+}
+
+model Product {
+  id             Int           @id @default(autoincrement())
+  category_id    Int?
+  name           String        @db.VarChar(200)
+  sku            String        @unique @db.VarChar(100)
+  image_url      String?       @db.VarChar(255)
+  specifications Json?
+  created_at     DateTime      @default(now())
+  category       Category?     @relation(fields: [category_id], references: [id])
+  inventory      Inventory[]
+  product_items  ProductItem[]
+  transaction_details TransactionDetail[]
+
+  @@map("products")
+}
+
+model Inventory {
+  id           Int             @id @default(autoincrement())
+  warehouse_id Int?
+  product_id   Int?
+  quantity     Int             @default(0)
+  status       InventoryStatus @default(READY_TO_SELL)
+  warehouse    Warehouse?      @relation(fields: [warehouse_id], references: [id])
+  product      Product?        @relation(fields: [product_id], references: [id])
+
+  @@unique([warehouse_id, product_id, status])
+  @@map("inventory")
+}
+
+enum InventoryStatus {
+  READY_TO_SELL
+  DEFECTIVE
+  IN_TRANSIT
+}
+
+model ProductItem {
+  id           Int               @id @default(autoincrement())
+  product_id   Int?
+  warehouse_id Int?
+  imei_serial  String            @unique @db.VarChar(100)
+  status       ProductItemStatus @default(IN_STOCK)
+  product      Product?          @relation(fields: [product_id], references: [id])
+  warehouse    Warehouse?        @relation(fields: [warehouse_id], references: [id])
+  transaction_imeis TransactionImei[]
+
+  @@map("product_items")
+}
+
+enum ProductItemStatus {
+  IN_STOCK
+  SOLD
+  WARRANTY
+  DEFECTIVE
+  IN_TRANSIT
+}
+
+model Transaction {
+  id                  Int               @id @default(autoincrement())
+  code                String            @unique @db.VarChar(50)
+  type                TransactionType
+  status              TransactionStatus @default(DRAFT)
+  created_by          Int?
+  source_warehouse_id Int?
+  dest_warehouse_id   Int?
+  supplier_id         Int?
+  customer_id         Int?
+  confirmed_by        Int?
+  confirmed_at        DateTime?
+  total_amount        Decimal           @default(0) @db.Decimal(15, 2)
+  created_at          DateTime          @default(now())
+  creator             User?             @relation(fields: [created_by], references: [id])
+  confirmer           User?             @relation("Confirmer", fields: [confirmed_by], references: [id])
+  source_warehouse    Warehouse?        @relation("SourceWarehouse", fields: [source_warehouse_id], references: [id])
+  dest_warehouse      Warehouse?        @relation("DestWarehouse", fields: [dest_warehouse_id], references: [id])
+  supplier            Supplier?         @relation(fields: [supplier_id], references: [id])
+  customer            Customer?         @relation(fields: [customer_id], references: [id])
+  details             TransactionDetail[]
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  INBOUND
+  OUTBOUND
+  TRANSFER
+}
+
+enum TransactionStatus {
+  DRAFT
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model TransactionDetail {
+  id             Int          @id @default(autoincrement())
+  transaction_id Int?
+  product_id     Int?
+  quantity       Int
+  unit_price     Decimal      @db.Decimal(15, 2)
+  transaction    Transaction? @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+  product        Product?     @relation(fields: [product_id], references: [id])
+  imeis          TransactionImei[]
+
+  @@map("transaction_details")
+}
+
+model TransactionImei {
+  id                    Int                @id @default(autoincrement())
+  transaction_detail_id Int?
+  product_item_id       Int?
+  detail                TransactionDetail? @relation(fields: [transaction_detail_id], references: [id], onDelete: Cascade)
+  product_item          ProductItem?       @relation(fields: [product_item_id], references: [id])
+
+  @@map("transaction_imei")
+}
