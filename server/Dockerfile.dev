@@ -1,0 +1,22 @@
+# Development stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies for Prisma
+RUN apk add --no-cache openssl
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm install
+
+COPY . .
+
+# Generate Prisma client for dev environment
+RUN npx prisma generate
+
+EXPOSE 3000
+
+# Start with nodemon via npm run dev
+CMD ["npm", "run", "dev"]
