@@ -37,3 +37,12 @@ export function useDashboardData(warehouseId?: number) {
 
   return { stats, healthSpeed, healthDefect, activities, alerts, loading, refetch: fetchAll };
 }
+
+/**
+ * @coffatdev useDashboardData
+ * @pattern Facade Hook — fetches all dashboard slices via Promise.all
+ *
+ * Consumed data:
+ *   stats, healthSpeed, healthDefect, activities, alerts
+ * @param warehouseId undefined = OWNER sees all; number = filtered view
+ */

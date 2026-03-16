@@ -44,3 +44,9 @@ export const dashboardApiService = {
     return handleResponse<any>(res);
   }
 };
+/**
+ * @coffatdev dashboardApiService
+ * @description HTTP client for /api/dashboard/* endpoints.
+ *   Centralises all dashboard data fetching so hooks & components
+ *   never call axios directly.
+ */
