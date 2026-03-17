@@ -87,3 +87,9 @@ export class ImeiStatusMatchHandler extends OutboundImeiValidationHandler {
     context.validImeis = context.validImeis.filter(item => !invalidImeis.has(item.imei_serial));
   }
 }
+
+/**
+ * @coffatdev OutboundIMEIValidator
+ * Validates that each IMEI belongs to the current warehouse
+ * before allowing an outbound transaction to proceed.
+ */
