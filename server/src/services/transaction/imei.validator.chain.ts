@@ -79,3 +79,12 @@ export class ImeiDatabaseDuplicateHandler extends ImeiValidationHandler {
     context.imeiList = context.imeiList.filter((imei) => !existingImeis.has(imei));
   }
 }
+
+/**
+ * @coffatdev IMEIValidatorChain
+ * @pattern Chain of Responsibility — chained IMEI validators:
+ *   FormatValidator → DuplicateValidator → OwnershipValidator
+ *
+ * Each validator either passes to the next handler or throws immediately.
+ * Used in both inbound and outbound transaction flows.
+ */
