@@ -74,3 +74,11 @@ export class InboundTransactionBuilder {
     return this.items;
   }
 }
+
+/**
+ * @coffatdev InboundBuilder
+ * @pattern Builder — constructs inbound transaction step-by-step:
+ *   setItems() → validateIMEIs() → reserveStock() → persist()
+ *
+ * Caller (InboundService) never deals with raw Prisma calls.
+ */

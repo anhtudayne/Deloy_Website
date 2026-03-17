@@ -168,3 +168,10 @@ export class InboundTransactionService {
 }
 
 export const inboundTransactionService = new InboundTransactionService();
+
+/**
+ * @coffatdev InboundService
+ * Orchestrates the inbound stock-receive workflow.
+ * Delegates construction to InboundBuilder; raises domain errors
+ * for the global error handler to format as HTTP responses.
+ */
