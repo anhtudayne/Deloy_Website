@@ -127,3 +127,11 @@ export interface ProductTemplate {
   defaultSpecifications: ProductSpecifications;
   requiredFields: string[];
 }
+
+/**
+ * @coffatdev ProductTypes
+ * Central type definitions for product management:
+ *   ProductCreateInput   → POST /products
+ *   ProductUpdateInput   → PUT  /products/:id
+ *   ProductQueryOptions  → GET  /products (filtering + pagination)
+ */
