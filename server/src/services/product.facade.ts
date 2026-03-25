@@ -211,3 +211,11 @@ class ProductFacade {
 
 // Export singleton instance của Facade
 export const productFacade = new ProductFacade();
+
+/**
+ * @coffatdev ProductFacade
+ * @pattern Facade — single interface for all product operations.
+ *
+ * Combines: ProductService + ProductValidator + ProductFactory
+ * Controllers only call ProductFacade; never individual services.
+ */
