@@ -199,3 +199,11 @@ export {
   LaptopSpecValidator,
   AccessorySpecValidator,
 };
+
+/**
+ * @coffatdev ProductValidator
+ * @pattern Specification — chainable product validation rules:
+ *   NameSpec → PriceSpec → IMEISpec → WarehouseSpec
+ *
+ * Throws domain errors with specific field-level messages on failure.
+ */

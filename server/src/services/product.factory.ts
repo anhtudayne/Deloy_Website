@@ -182,3 +182,11 @@ export {
   AccessoryCreator,
   ProductCreator,
 };
+
+/**
+ * @coffatdev ProductFactory
+ * @pattern Factory — creates product entities with correct defaults.
+ *
+ * IMEI-tracked products vs. quantity-only products are handled
+ * transparently via factory method, hiding construction complexity.
+ */
