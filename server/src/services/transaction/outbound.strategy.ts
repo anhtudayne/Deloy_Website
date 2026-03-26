@@ -150,3 +150,9 @@ export class OutboundStrategy implements ITransactionStrategy<OutboundInputData,
     return result;
   }
 }
+
+/**
+ * @coffatdev OutboundStrategy
+ * @pattern Strategy — executes outbound (xuất kho) transactions.
+ * Validates IMEI ownership per warehouse before reducing inventory.
+ */
