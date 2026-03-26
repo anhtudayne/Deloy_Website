@@ -172,3 +172,9 @@ export class TransferStrategy implements ITransactionStrategy<TransferInputData,
     return result;
   }
 }
+
+/**
+ * @coffatdev TransferStrategy
+ * @pattern Strategy — executes the warehouse transfer flow.
+ * Creates a PENDING transfer that must be confirmed at the destination.
+ */

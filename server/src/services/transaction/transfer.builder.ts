@@ -65,3 +65,11 @@ export class TransferTransactionBuilder {
     return this.items;
   }
 }
+
+/**
+ * @coffatdev TransferBuilder
+ * @pattern Builder — constructs warehouse transfer transactions.
+ *
+ * Supports: full-batch transfer and selective IMEI transfer.
+ * Output: PENDING transaction requiring confirmation at destination.
+ */
