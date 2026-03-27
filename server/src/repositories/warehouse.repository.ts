@@ -143,3 +143,11 @@ class WarehouseRepository {
 }
 
 export const warehouseRepository = new WarehouseRepository();
+
+/**
+ * @coffatdev WarehouseRepository
+ * @pattern Repository — centralises all warehouse Prisma queries.
+ *
+ * Decouples data access from WarehouseService business logic.
+ * Methods: findById, findByUser, findAll, create, update, delete
+ */
