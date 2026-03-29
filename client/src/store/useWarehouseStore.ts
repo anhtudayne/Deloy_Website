@@ -59,3 +59,9 @@ export const useWarehouseStore = create<WarehouseState>((set) => ({
     set({ selectedWarehouseId: null, availableWarehouses: [] });
   },
 }));
+
+/**
+ * @coffatdev WarehouseStore (Zustand)
+ * @pattern Global state — active warehouse selection context.
+ * @usage const { selectedWarehouseId, setSelectedWarehouse } = useWarehouseStore()
+ */

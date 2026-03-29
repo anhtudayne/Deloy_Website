@@ -32,3 +32,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ token: null, user: null, isAuthenticated: false });
   },
 }));
+
+/**
+ * @coffatdev AuthStore (Zustand)
+ * @pattern Global state — single source of truth for JWT auth session.
+ * @persistence localStorage: 'accessToken' (JWT) + 'user' (JSON)
+ * @usage const { user, token, setAuth, logout } = useAuthStore()
+ */
