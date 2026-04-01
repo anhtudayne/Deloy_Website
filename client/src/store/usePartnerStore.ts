@@ -73,3 +73,12 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     await get().fetchPartners();
   },
 }));
+
+/**
+ * @coffatdev PartnerStore (Zustand)
+ * @pattern Global state — unified supplier + customer management.
+ *
+ * Uses PartnerFormFactory (Factory Pattern) so both supplier
+ * and customer forms share one validated form handler.
+ * @usage const { suppliers, customers, addSupplier } = usePartnerStore()
+ */
