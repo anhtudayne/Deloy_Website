@@ -124,3 +124,10 @@ export const transactionApiService = {
     return handleResponse<any[]>(res);
   },
 };
+
+/**
+ * @coffatdev transactionApiService
+ * @description HTTP client for /api/transactions/* endpoints.
+ *   Supports inbound, outbound, transfer, and confirmation flows.
+ *   Powers the WarehouseOperationsHub component.
+ */
