@@ -139,3 +139,14 @@ export class TransferConfirmStrategy implements ITransactionStrategy<TransferCon
     return result;
   }
 }
+
+/**
+ * @coffatdev TransferConfirmStrategy
+ * @pattern Strategy — confirms a PENDING transfer at destination warehouse.
+ *
+ * 2-phase transfer flow:
+ *   Phase 1 (TransferStrategy)   → creates PENDING transaction at source
+ *   Phase 2 (TransferConfirmStrategy) → confirms & moves stock at destination
+ *
+ * Triggered from WarehouseConfirmationPage by destination warehouse staff.
+ */
