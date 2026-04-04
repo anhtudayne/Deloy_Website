@@ -9,3 +9,14 @@ docker-compose.yml
 **/node_modules
 **/dist
 **/.env
+
+# CoffatDev: extended ignore list for docker builds
+.env
+.env.local
+.env.production
+dist/
+build/
+coverage/
+*.log
+.DS_Store
+.vscode/
