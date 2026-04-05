@@ -8,7 +8,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { authRepository } from "../repositories/auth.repository";
-import { LoginRequestDto, LoginResponseDto, JwtPayload } from "../types/auth.types";
+import { LoginRequestDto, LoginResponseDto, JwtPayload, RegisterRequestDto } from "../types/auth.types";
 
 // =============================================
 // Custom Errors
@@ -31,6 +31,13 @@ export class AccountInactiveError extends Error {
   constructor() {
     super("Tài khoản của bạn chưa được kích hoạt.");
     this.name = "AccountInactiveError";
+  }
+}
+
+export class UserExistsError extends Error {
+  constructor() {
+    super("Tên đăng nhập hoặc email đã tồn tại.");
+    this.name = "UserExistsError";
   }
 }
 
@@ -103,6 +110,54 @@ class AuthService {
         username: user.username,
         email: user.email,
         role: user.role?.name || "Unknown",
+        assignedWarehouses,
+      },
+    };
+  }
+
+  /**
+   * Đăng ký User mới
+   */
+  async register(dto: RegisterRequestDto): Promise<LoginResponseDto> {
+    const existingUsername = await authRepository.findUserByUsername(dto.username);
+    if (existingUsername) {
+      throw new UserExistsError();
+    }
+    const existingEmail = await authRepository.findUserByEmail(dto.email);
+    if (existingEmail) {
+      throw new UserExistsError();
+    }
+
+    const passwordHash = await this.hashPassword(dto.password);
+
+    const user = await authRepository.createUser({
+      full_name: dto.fullName,
+      username: dto.username,
+      email: dto.email,
+      password_hash: passwordHash,
+    });
+
+    const assignedWarehouses = user.warehouses.map((uw) => uw.warehouse_id);
+    const payload: JwtPayload = {
+      userId: user.id,
+      username: user.username,
+      role: user.role?.name || "Warehouse Staff",
+      roleId: user.role?.id || 0,
+      assignedWarehouses,
+    };
+
+    const accessToken = jwt.sign(payload, this.jwtSecret, {
+      expiresIn: this.jwtExpiresIn,
+    } as jwt.SignOptions);
+
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        fullName: user.full_name,
+        username: user.username,
+        email: user.email,
+        role: user.role?.name || "Warehouse Staff",
         assignedWarehouses,
       },
     };

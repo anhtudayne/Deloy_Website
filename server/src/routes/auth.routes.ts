@@ -18,6 +18,13 @@ const router = Router();
 router.post("/login", (req, res, next) => authController.login(req, res, next));
 
 /**
+ * @route   POST /api/auth/register
+ * @desc    Đăng ký tài khoản mới
+ * @access  Public
+ */
+router.post("/register", (req, res, next) => authController.register(req, res, next));
+
+/**
  * @route   GET /api/auth/me
  * @desc    Lấy thông tin user đang đăng nhập
  * @access  Private (Cần JWT hợp lệ)
