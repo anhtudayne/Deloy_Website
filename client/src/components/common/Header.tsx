@@ -97,11 +97,12 @@ export default function Header({
 
       <div className="flex flex-wrap items-center gap-3">
         {showSearch && (
-          <div className="hidden xl:flex items-center gap-2.5 rounded-full bg-white border border-border-soft px-4 py-2 w-[260px] shadow-apple-inset focus-within:ring-2 focus-within:ring-primary/15 transition-shadow">
-            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+          <div className="hidden xl:flex items-center gap-2.5 rounded-full bg-white border border-border-soft px-4 py-2 w-[260px] shadow-apple-inset focus-within:ring-2 focus-within:ring-primary/15 transition-shadow" role="search">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
             <input
               className="w-full bg-transparent outline-none text-[14px] text-slate-700 placeholder:text-slate-500 font-normal"
               placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
               onChange={(e) => onSearchChange?.(e.target.value)}
             />
           </div>
@@ -132,14 +133,16 @@ export default function Header({
         <div className="flex items-center gap-2 pl-3 border-l border-border-soft ml-1">
           <button
             type="button"
+            aria-label="Thông báo"
             className="relative w-11 h-11 rounded-full bg-white border border-border-soft flex items-center justify-center transition-all active:opacity-80 active:scale-[0.98] hover:bg-slate-50 shadow-flat"
           >
-            <Bell className="w-5 h-5 text-slate-600" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-400 ring-2 ring-white" />
+            <Bell className="w-5 h-5 text-slate-600" aria-hidden="true" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-400 ring-2 ring-white" aria-label="Có thông báo mới" />
           </button>
 
           <button
             type="button"
+            aria-label="Tài khoản người dùng"
             className="w-11 h-11 rounded-full bg-primary flex items-center justify-center transition-all active:opacity-90 active:scale-[0.98] text-[14px] font-bold text-white shadow-flat"
           >
             {userInitials}

@@ -115,6 +115,10 @@ function ProgressBar({
         "w-full rounded-full overflow-hidden bg-slate-100 shadow-apple-inset",
         height,
       )}
+      role="progressbar"
+      aria-valuenow={v}
+      aria-valuemin={0}
+      aria-valuemax={100}
     >
       <div
         className={cn(
@@ -652,9 +656,10 @@ export default function Dashboard() {
                   </div>
                   <button
                     type="button"
+                    aria-label="Tối ưu vị trí lưu trữ"
                     className="mt-3 w-full rounded-full bg-slate-900 text-white text-[12px] font-semibold py-2.5 flex items-center justify-center gap-1.5 transition-all active:opacity-90 shadow-apple-sm"
                   >
-                    <Zap className="w-3.5 h-3.5" />
+                    <Zap className="w-3.5 h-3.5" aria-hidden="true" />
                     Tối ưu Vị trí
                   </button>
                 </div>
