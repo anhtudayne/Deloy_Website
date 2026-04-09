@@ -29,9 +29,22 @@ const app: Application = express();
 // =============================================
 
 // CORS - Cho phép frontend truy cập API
+// Hỗ trợ nhiều origin: localhost (dev) + Vercel domain (production)
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.CLIENT_URL, // Vercel URL khi deploy
+].filter(Boolean) as string[];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Cho phép requests không có origin (mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS: Origin ${origin} not allowed`));
+    },
     credentials: true,
   })
 );

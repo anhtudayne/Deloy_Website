@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { usePartnerStore } from '../store/usePartnerStore';
-import { Plus, Edit2, Trash2, Mail, Phone, MapPin, Package, Home } from 'lucide-react';
+import { Plus, Edit2, Trash2, Mail, Phone, MapPin, Package, Home, Users } from 'lucide-react';
 import Header from '../components/common/Header';
 import AppSidebar from '../components/common/AppSidebar';
 
