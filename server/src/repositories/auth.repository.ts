@@ -68,6 +68,53 @@ class AuthRepository {
       },
     }) as any;
   }
+
+  /**
+   * Tạo User mới
+   */
+  async createUser(data: { username: string; email: string; full_name: string; password_hash: string }): Promise<UserWithRole> {
+    const defaultRole = await prisma.role.findFirst({ where: { name: "Warehouse Staff" } });
+    
+    return prisma.user.create({
+      data: {
+        username: data.username,
+        email: data.email,
+        full_name: data.full_name,
+        password_hash: data.password_hash,
+        status: "ACTIVE",
+        role_id: defaultRole ? defaultRole.id : null,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        full_name: true,
+        password_hash: true,
+        status: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        warehouses: {
+          select: {
+            warehouse_id: true,
+          },
+        },
+      },
+    }) as unknown as Promise<UserWithRole>;
+  }
+
+  /**
+   * Tìm User bằng email
+   */
+  async findUserByEmail(email: string): Promise<{ id: number } | null> {
+    return prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+  }
 }
 
 // Export singleton instance của repository
