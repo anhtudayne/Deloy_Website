@@ -82,8 +82,9 @@ export default function AppSidebar() {
   const logout = useAuthStore((state) => state.logout);
 
   return (
-    <aside className="shrink-0">
-      <div
+    <aside className="shrink-0" role="complementary" aria-label="Thanh điều hướng">
+      <nav
+        aria-label="Menu chính"
         className={cn(
           "group/sidebar flex w-[72px] flex-col gap-2 overflow-hidden border-r border-border-soft bg-white py-6 pl-2 pr-2",
           "transition-[width] duration-200 ease-out hover:w-[220px]",
@@ -196,7 +197,7 @@ export default function AppSidebar() {
             Đăng xuất
           </span>
         </button>
-      </div>
+      </nav>
     </aside>
   );
 }
