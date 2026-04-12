@@ -32,6 +32,13 @@ export interface LoginRequestDto {
   password: string;
 }
 
+export interface RegisterRequestDto {
+  fullName: string;
+  username: string;
+  email: string;
+  password: string;
+}
+
 export interface LoginResponseDto {
   accessToken: string;
   user: {

@@ -7,7 +7,7 @@
 
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import { authService, InvalidCredentialsError, AccountLockedError, AccountInactiveError } from "../services/auth.service";
+import { authService, InvalidCredentialsError, AccountLockedError, AccountInactiveError, UserExistsError } from "../services/auth.service";
 
 // =============================================
 // Zod Schema - Validation đầu vào
@@ -19,6 +19,13 @@ const loginSchema = z.object({
   password: z
     .string({ required_error: "Password là bắt buộc." })
     .min(6, "Password phải có ít nhất 6 ký tự."),
+});
+
+const registerSchema = z.object({
+  fullName: z.string({ required_error: "Họ và tên là bắt buộc." }).min(2, "Họ tên quá ngắn."),
+  username: z.string({ required_error: "Username là bắt buộc." }).min(3, "Username phải có ít nhất 3 ký tự."),
+  email: z.string({ required_error: "Email là bắt buộc." }).email("Email không hợp lệ."),
+  password: z.string({ required_error: "Password là bắt buộc." }).min(6, "Password phải có ít nhất 6 ký tự."),
 });
 
 class AuthController {
@@ -64,6 +71,38 @@ class AuthController {
       }
 
       // Lỗi không xác định → chuyển sang global error handler
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/auth/register
+   * Đăng ký tài khoản mới và cấp JWT.
+   */
+  async register(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const validationResult = registerSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        res.status(400).json({
+          success: false,
+          message: "Dữ liệu không hợp lệ.",
+          errors: validationResult.error.flatten().fieldErrors,
+        });
+        return;
+      }
+
+      const result = await authService.register(validationResult.data);
+
+      res.status(201).json({
+        success: true,
+        message: "Đăng ký thành công.",
+        data: result,
+      });
+    } catch (error) {
+      if (error instanceof UserExistsError) {
+        res.status(409).json({ success: false, message: error.message });
+        return;
+      }
       next(error);
     }
   }

@@ -8,7 +8,9 @@ import {
   PackageSearch,
   Users,
   Settings,
+  LogOut,
 } from "lucide-react";
+import { useAuthStore } from "../../store/useAuthStore";
 
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
@@ -77,6 +79,7 @@ function SidebarNavLink({
  */
 export default function AppSidebar() {
   const activeNav = useActiveNav();
+  const logout = useAuthStore((state) => state.logout);
 
   return (
     <aside className="shrink-0">
@@ -167,6 +170,30 @@ export default function AppSidebar() {
             )}
           >
             Cài đặt
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={logout}
+          title="Đăng xuất"
+          className={cn(
+            "flex h-10 w-full min-w-0 items-center rounded-xl border border-border-soft bg-white text-slate-500 shadow-apple-sm transition-colors",
+            "justify-center gap-0 pl-0 hover:bg-status-danger/10 hover:text-status-danger hover:border-status-danger/20",
+            "group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-2",
+            "active:opacity-80 active:scale-[0.98]",
+          )}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+            <LogOut className="h-5 w-5" />
+          </span>
+          <span
+            className={cn(
+              "min-w-0 overflow-hidden whitespace-nowrap text-left text-[13px] font-medium transition-all duration-200 ease-out",
+              "max-w-0 opacity-0 group-hover/sidebar:max-w-[200px] group-hover/sidebar:opacity-100",
+            )}
+          >
+            Đăng xuất
           </span>
         </button>
       </div>
