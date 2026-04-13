@@ -415,8 +415,20 @@ export default function Dashboard() {
 
   if (loading && !stats)
     return (
-      <div className="p-10 text-center text-slate-600">
-        Đang tải DLI (Dashboard Live Intelligence)...
+      <div className="min-h-screen bg-surface-app flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <div className="w-16 h-16 rounded-2xl bg-white border border-border-soft shadow-apple-lg flex items-center justify-center">
+            <Zap className="w-8 h-8 text-primary animate-bounce delay-150" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold tracking-tight text-slate-900">
+              Đang tải DLI...
+            </h3>
+            <p className="text-[13px] text-slate-500 mt-1">
+              Dashboard Live Intelligence đang tổng hợp dữ liệu
+            </p>
+          </div>
+        </div>
       </div>
     );
 
