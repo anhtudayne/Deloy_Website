@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '../config/database';
+import { InventoryStatus, ProductItemStatus } from '@prisma/client';
 import { CreateProductDto, UpdateProductDto, ProductQueryDto, ProductWithInventory } from '../types/product.types';
 
 class ProductRepository {
@@ -49,6 +50,16 @@ class ProductRepository {
             status: true,
           },
         },
+        product_items: {
+          where: warehouse_id ? { warehouse_id } : {},
+          select: {
+            id: true,
+            imei_serial: true,
+            status: true,
+            warehouse_id: true,
+          },
+          take: 10,
+        },
       },
       orderBy: { created_at: 'desc' },
       skip,
@@ -71,6 +82,15 @@ class ProductRepository {
             quantity: true,
             status: true,
           },
+        },
+        product_items: {
+          select: {
+            id: true,
+            imei_serial: true,
+            status: true,
+            warehouse_id: true,
+          },
+          take: 20,
         },
       },
     }) as unknown as ProductWithInventory | null;
@@ -121,6 +141,15 @@ class ProductRepository {
         inventory: {
           select: { id: true, warehouse_id: true, quantity: true, status: true },
         },
+        product_items: {
+          select: {
+            id: true,
+            imei_serial: true,
+            status: true,
+            warehouse_id: true,
+          },
+          take: 20,
+        },
       },
     }) as unknown as ProductWithInventory;
   }
@@ -129,7 +158,30 @@ class ProductRepository {
    * Xóa sản phẩm (chỉ Owner/Manager).
    */
   async delete(id: number): Promise<void> {
-    await prisma.product.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.inventory.deleteMany({ where: { product_id: id } });
+      await tx.productItem.deleteMany({ where: { product_id: id } });
+      await tx.product.delete({ where: { id } });
+    });
+  }
+
+  /**
+   * Kiểm tra sản phẩm đã phát sinh dữ liệu giao dịch hay chưa.
+   * Nếu đã phát sinh lịch sử, không cho xóa cứng để tránh mất tính toàn vẹn dữ liệu.
+   */
+  async hasDeleteDependencies(id: number): Promise<boolean> {
+    const [detailCount, imeiTraceCount] = await Promise.all([
+      prisma.transactionDetail.count({ where: { product_id: id } }),
+      prisma.transactionImei.count({
+        where: {
+          product_item: {
+            product_id: id,
+          },
+        },
+      }),
+    ]);
+
+    return detailCount > 0 || imeiTraceCount > 0;
   }
 
   /**
@@ -169,40 +221,55 @@ class ProductRepository {
       sold_count: number;
     }>
   > {
-    // Query tất cả category gốc (Master Data Catalog)
+    const productSelect = {
+      id: true,
+      inventory: {
+        where: {
+          status: InventoryStatus.READY_TO_SELL,
+          ...(warehouseId ? { warehouse_id: warehouseId } : {}),
+        },
+        select: { quantity: true },
+      },
+      product_items: {
+        where: {
+          status: ProductItemStatus.SOLD,
+          ...(warehouseId ? { warehouse_id: warehouseId } : {}),
+        },
+        select: { id: true }
+      }
+    };
+
+    // Query category gốc + category con để thống kê theo "nhóm cha"
     const categories = await prisma.category.findMany({
       where: {
-        products: { some: {} }, // Chỉ lấy category có ít nhất 1 sản phẩm
+        OR: [
+          { products: { some: {} } }, // Có product gắn trực tiếp
+          { children: { some: { products: { some: {} } } } }, // Hoặc có product ở category con
+        ],
         parent_id: null,        // Chỉ lấy category gốc
       },
       select: {
         id: true,
         name: true,
-        products: {
+        products: { select: productSelect },
+        children: {
           select: {
             id: true,
-            inventory: {
-              where: {
-                status: 'READY_TO_SELL',
-                ...(warehouseId ? { warehouse_id: warehouseId } : {}),
-              },
-              select: { quantity: true },
-            },
-            product_items: {
-              where: {
-                status: 'SOLD',
-                ...(warehouseId ? { warehouse_id: warehouseId } : {}),
-              },
-              select: { id: true }
-            }
+            products: { select: productSelect },
           },
         },
       },
     });
 
     return categories.map((cat: any) => {
+      // Gom products từ category cha + tất cả category con
+      const groupedProducts = [
+        ...cat.products,
+        ...cat.children.flatMap((child: any) => child.products),
+      ];
+
       // Đếm các Model (Products) có tồn kho hoặc có lịch sử bán
-      const activeModels = cat.products.filter((p: any) => p.inventory.length > 0 || p.product_items.length > 0);
+      const activeModels = groupedProducts.filter((p: any) => p.inventory.length > 0 || p.product_items.length > 0);
       return {
         category_id: cat.id,
         category_name: cat.name,
@@ -212,7 +279,7 @@ class ProductRepository {
             sum + p.inventory.reduce((s: number, inv: any) => s + inv.quantity, 0),
           0
         ),
-        sold_count: cat.products.reduce(
+        sold_count: groupedProducts.reduce(
           (sum: number, p: any) => sum + p.product_items.length,
           0
         )

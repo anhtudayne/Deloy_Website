@@ -11,6 +11,7 @@ import { z } from 'zod';
 import {
   productService,
   ProductNotFoundError,
+  ProductInUseError,
   DuplicateSkuError,
   InvalidCategoryError,
   InvalidWarehouseError,
@@ -264,6 +265,10 @@ class ProductController {
     } catch (error) {
       if (error instanceof ProductNotFoundError) {
         res.status(404).json({ success: false, message: error.message });
+        return;
+      }
+      if (error instanceof ProductInUseError) {
+        res.status(409).json({ success: false, message: error.message });
         return;
       }
       next(error);

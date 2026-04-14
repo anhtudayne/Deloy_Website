@@ -241,3 +241,82 @@ INSERT INTO transaction_imei (transaction_detail_id, product_item_id) VALUES
 (1, 3),
 (2, 4),
 (2, 5);
+
+-- =========================================================================
+-- 7. DỮ LIỆU MẪU BỔ SUNG CHO DASHBOARD (RẢI 7 NGÀY, GIÀU KPI)
+-- =========================================================================
+
+-- Bổ sung tồn kho để dashboard hiển thị dày dữ liệu hơn theo danh mục/kho
+INSERT INTO inventory (warehouse_id, product_id, quantity, status) VALUES
+(1, 4, 35, 'READY_TO_SELL'),
+(2, 3, 28, 'READY_TO_SELL'),
+(3, 1, 24, 'READY_TO_SELL'),
+(3, 2, 18, 'READY_TO_SELL'),
+(4, 2, 14, 'READY_TO_SELL'),
+(4, 4, 11, 'READY_TO_SELL'),
+(5, 3, 20, 'READY_TO_SELL'),
+(5, 4, 22, 'READY_TO_SELL'),
+(2, 1, 3, 'DEFECTIVE'),
+(3, 3, 2, 'DEFECTIVE'),
+(4, 2, 4, 'IN_TRANSIT'),
+(5, 2, 6, 'IN_TRANSIT');
+
+-- Bổ sung product items ở trạng thái SOLD để card "Đã bán" có dữ liệu thật
+INSERT INTO product_items (product_id, warehouse_id, imei_serial, status) VALUES
+(1, 1, 'IMEI-1-1-101', 'SOLD'),
+(1, 1, 'IMEI-1-1-102', 'SOLD'),
+(1, 2, 'IMEI-1-2-103', 'SOLD'),
+(1, 3, 'IMEI-1-3-104', 'SOLD'),
+(1, 4, 'IMEI-1-4-105', 'SOLD'),
+(2, 1, 'IMEI-2-1-101', 'SOLD'),
+(2, 2, 'IMEI-2-2-102', 'SOLD'),
+(2, 3, 'IMEI-2-3-103', 'SOLD'),
+(2, 4, 'IMEI-2-4-104', 'SOLD'),
+(3, 1, 'IMEI-3-1-101', 'SOLD'),
+(3, 2, 'IMEI-3-2-102', 'SOLD'),
+(3, 3, 'IMEI-3-3-103', 'SOLD'),
+(4, 2, 'IMEI-4-2-101', 'SOLD'),
+(4, 4, 'IMEI-4-4-102', 'SOLD');
+
+-- Bổ sung giao dịch rải trong 7 ngày gần nhất để feed "Hoạt Động" + biểu đồ
+INSERT INTO transactions (
+    code, type, status, created_by, source_warehouse_id, dest_warehouse_id, supplier_id, customer_id, confirmed_by, confirmed_at, total_amount, created_at
+) VALUES
+('INB-002', 'INBOUND', 'COMPLETED', 2, NULL, 2, 1, NULL, 2, DATE_SUB(NOW(), INTERVAL 6 DAY), 9800.00, DATE_SUB(NOW(), INTERVAL 6 DAY)),
+('TRF-001', 'TRANSFER', 'COMPLETED', 2, 1, 3, NULL, NULL, 1, DATE_SUB(NOW(), INTERVAL 5 DAY), 7200.00, DATE_SUB(NOW(), INTERVAL 5 DAY)),
+('OUT-002', 'OUTBOUND', 'COMPLETED', 1, 1, NULL, NULL, 1, 1, DATE_SUB(NOW(), INTERVAL 5 DAY), 5300.00, DATE_SUB(NOW(), INTERVAL 5 DAY)),
+('INB-003', 'INBOUND', 'PENDING', 2, NULL, 1, 1, NULL, NULL, NULL, 6150.00, DATE_SUB(NOW(), INTERVAL 4 DAY)),
+('OUT-003', 'OUTBOUND', 'COMPLETED', 2, 2, NULL, NULL, 2, 2, DATE_SUB(NOW(), INTERVAL 4 DAY), 4400.00, DATE_SUB(NOW(), INTERVAL 4 DAY)),
+('TRF-002', 'TRANSFER', 'PENDING', 1, 2, 4, NULL, NULL, NULL, NULL, 3100.00, DATE_SUB(NOW(), INTERVAL 3 DAY)),
+('INB-004', 'INBOUND', 'COMPLETED', 1, NULL, 3, 1, NULL, 1, DATE_SUB(NOW(), INTERVAL 2 DAY), 8700.00, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+('OUT-004', 'OUTBOUND', 'COMPLETED', 2, 3, NULL, NULL, 1, 1, DATE_SUB(NOW(), INTERVAL 2 DAY), 3900.00, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+('INB-005', 'INBOUND', 'PENDING', 1, NULL, 2, 1, NULL, NULL, NULL, 4600.00, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+('TRF-003', 'TRANSFER', 'COMPLETED', 2, 4, 1, NULL, NULL, 2, DATE_SUB(NOW(), INTERVAL 1 DAY), 5500.00, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+('OUT-005', 'OUTBOUND', 'COMPLETED', 1, 1, NULL, NULL, 2, 1, NOW(), 4100.00, NOW()),
+('INB-006', 'INBOUND', 'PENDING', 2, NULL, 1, 1, NULL, NULL, NULL, 7800.00, NOW());
+
+-- Bổ sung chi tiết giao dịch cho các giao dịch mới
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 1, 5, 1960.00 FROM transactions t WHERE t.code = 'INB-002';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 3, 4, 1800.00 FROM transactions t WHERE t.code = 'TRF-001';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 1, 2, 2650.00 FROM transactions t WHERE t.code = 'OUT-002';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 4, 6, 1025.00 FROM transactions t WHERE t.code = 'INB-003';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 2, 2, 2200.00 FROM transactions t WHERE t.code = 'OUT-003';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 4, 3, 1033.33 FROM transactions t WHERE t.code = 'TRF-002';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 2, 3, 2900.00 FROM transactions t WHERE t.code = 'INB-004';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 3, 2, 1950.00 FROM transactions t WHERE t.code = 'OUT-004';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 1, 2, 2300.00 FROM transactions t WHERE t.code = 'INB-005';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 2, 2, 2750.00 FROM transactions t WHERE t.code = 'TRF-003';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 4, 4, 1025.00 FROM transactions t WHERE t.code = 'OUT-005';
+INSERT INTO transaction_details (transaction_id, product_id, quantity, unit_price)
+SELECT t.id, 3, 4, 1950.00 FROM transactions t WHERE t.code = 'INB-006';

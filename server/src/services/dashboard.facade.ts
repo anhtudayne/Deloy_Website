@@ -3,6 +3,25 @@ import { HealthCalculationStrategy, DefectRateStrategy, ProcessSpeedStrategy, St
 import { InventoryStatus, TransactionType, TransactionStatus } from '@prisma/client';
 
 export class DashboardFacade {
+  private canonicalCategoryName(category?: { id?: number; name?: string | null } | null): string | null {
+    if (!category) return null;
+    if (category.id === 1) return 'Điện thoại';
+    if (category.id === 2) return 'Laptop';
+    if (category.id === 3) return 'Phụ kiện';
+
+    const rawName = category.name ?? '';
+    const normalized = rawName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+
+    if (normalized.includes('dien thoai') || normalized.includes('phone')) return 'Điện thoại';
+    if (normalized.includes('laptop')) return 'Laptop';
+    if (normalized.includes('phu kien') || normalized.includes('accessory')) return 'Phụ kiện';
+    return rawName || null;
+  }
+
   
   public async getStats(warehouseId?: number) {
     const filter = warehouseId ? { warehouse_id: warehouseId } : {};
@@ -30,13 +49,13 @@ export class DashboardFacade {
     const inventoryByCategoryRaw = await db.inventory.findMany({
       where: { ...filter, status: InventoryStatus.READY_TO_SELL },
       include: {
-        product: { select: { category: { select: { name: true } } } }
+        product: { select: { category: { select: { id: true, name: true } } } }
       }
     });
 
     const categoryStock: Record<string, number> = {};
     for (const item of inventoryByCategoryRaw) {
-      const cname = item.product?.category?.name;
+      const cname = this.canonicalCategoryName(item.product?.category);
       if (cname) {
         categoryStock[cname] = (categoryStock[cname] || 0) + item.quantity;
       }
@@ -58,13 +77,13 @@ export class DashboardFacade {
         status: 'SOLD'
       },
       include: {
-        product: { select: { category: { select: { name: true } } } }
+        product: { select: { category: { select: { id: true, name: true } } } }
       }
     });
 
     const categorySold: Record<string, number> = {};
     for (const item of soldByCategoryRaw) {
-      const cname = item.product?.category?.name;
+      const cname = this.canonicalCategoryName(item.product?.category);
       if (cname) {
         categorySold[cname] = (categorySold[cname] || 0) + 1;
       }
