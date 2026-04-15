@@ -11,7 +11,6 @@
 
 import { productRepository } from '../repositories/product.repository';
 import { productFacade } from './product.facade';
-import { ProductFactory } from './product.factory';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -25,6 +24,13 @@ export class ProductNotFoundError extends Error {
   constructor(id: number) {
     super(`Sản phẩm với ID #${id} không tồn tại.`);
     this.name = 'ProductNotFoundError';
+  }
+}
+
+export class ProductInUseError extends Error {
+  constructor(id: number) {
+    super(`Sản phẩm #${id} đã phát sinh giao dịch/IMEI, không thể xóa cứng.`);
+    this.name = 'ProductInUseError';
   }
 }
 
@@ -87,6 +93,10 @@ class ProductService {
    */
   async deleteProduct(id: number): Promise<void> {
     await this.getProductById(id);
+    const inUse = await productRepository.hasDeleteDependencies(id);
+    if (inUse) {
+      throw new ProductInUseError(id);
+    }
     await productRepository.delete(id);
   }
 
@@ -100,25 +110,45 @@ class ProductService {
   async getProductStats(warehouseId?: number): Promise<ProductStatsDto> {
     const rawStats = await productRepository.getCategoryStats(warehouseId);
 
-    // Lấy danh sách các category được Factory hỗ trợ (không hard-code)
-    const supportedCategories = ProductFactory.getSupportedCategories();
+    const repairMojibake = (name: string) => {
+      try {
+        const repaired = Buffer.from(name, 'latin1').toString('utf8');
+        return repaired.includes('�') ? name : repaired;
+      } catch {
+        return name;
+      }
+    };
 
-    const find = (categoryName: string): CategoryStatsDto => {
-      const row = rawStats.find((r) => r.category_name === categoryName);
+    const normalize = (name: string) =>
+      repairMojibake(name)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+    const findByAliases = (
+      aliases: string[],
+      fallbackName: string,
+      fallbackCategoryId?: number,
+    ): CategoryStatsDto => {
+      const normalizedAliases = aliases.map(normalize);
+      const row =
+        rawStats.find((r) => normalizedAliases.includes(normalize(r.category_name))) ??
+        (fallbackCategoryId != null
+          ? rawStats.find((r) => r.category_id === fallbackCategoryId)
+          : undefined);
       return {
-        category_name: row?.category_name ?? categoryName,
-        category_id: row?.category_id ?? 0,
+        category_name: row?.category_name ?? fallbackName,
+        category_id: row?.category_id ?? (fallbackCategoryId ?? 0),
         model_count: row?.model_count ?? 0,    // Updated from product_count
         total_quantity: row?.total_quantity ?? 0,
         sold_count: row?.sold_count ?? 0,
       };
     };
 
-    // Map từng category theo vị trí trong Factory (Phone=0, Laptop=1, Accessory=2)
-    const [phoneName, laptopName, accessoryName] = supportedCategories;
-    const phones = find(phoneName ?? 'Điện thoại');
-    const laptops = find(laptopName ?? 'Laptop');
-    const accessories = find(accessoryName ?? 'Phụ kiện');
+    const phones = findByAliases(['Điện thoại', 'Phone'], 'Điện thoại', 1);
+    const laptops = findByAliases(['Laptop'], 'Laptop', 2);
+    const accessories = findByAliases(['Phụ kiện', 'Accessory'], 'Phụ kiện', 3);
 
     const total_models = rawStats.reduce((s, r) => s + r.model_count, 0); // Rename from total_products
     const total_quantity = rawStats.reduce((s, r) => s + r.total_quantity, 0);

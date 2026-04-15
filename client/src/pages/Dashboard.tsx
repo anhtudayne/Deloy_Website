@@ -43,6 +43,16 @@ type ActivityType =
   | "ĐANG KIỂM KÊ"
   | "NHẬP HÀNG";
 
+type DashboardActivity = {
+  id: number | string;
+  code?: string;
+  type?: "INBOUND" | "OUTBOUND" | "TRANSFER";
+  created_at?: string;
+  creator?: {
+    full_name?: string;
+  };
+};
+
 type TransactionEntity = {
   id: string;
   actorName: string;
@@ -64,6 +74,26 @@ function cn(...parts: Array<string | false | null | undefined>) {
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
+}
+
+function normalizeCategoryName(name: string) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function getCategoryValue(
+  data: Record<string, number> | undefined,
+  aliases: string[],
+) {
+  if (!data) return 0;
+  const normalizedAliases = aliases.map(normalizeCategoryName);
+  const found = Object.entries(data).find(([key]) =>
+    normalizedAliases.includes(normalizeCategoryName(key)),
+  );
+  return found?.[1] ?? 0;
 }
 
 // ─────────────────────────────────────────────
@@ -354,36 +384,54 @@ export default function Dashboard() {
     return loading ? "Đang xác định..." : "Kho không tồn tại";
   }, [selectedWarehouseId, availableWarehouses, loading]);
 
-  const chartData = useMemo(
-    () => [
-      { day: "T2", v: 38, fill: "rgba(26,115,232,0.45)" },
-      { day: "T3", v: 56, fill: "rgba(26,115,232,0.55)" },
-      { day: "T4", v: 48, fill: "rgba(26,115,232,0.5)" },
-      { day: "T5", v: 92, fill: "rgba(26,115,232,0.85)" },
-      { day: "T6", v: 62, fill: "rgba(26,115,232,0.6)" },
-      { day: "T7", v: 74, fill: "rgba(26,115,232,0.7)" },
-      { day: "CN", v: 28, fill: "rgba(26,115,232,0.4)" },
-    ],
-    [],
-  );
+  const chartData = useMemo(() => {
+    const days = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      return d;
+    });
+
+    const dailyCount = new Map<string, number>();
+    for (const day of last7Days) {
+      const key = day.toISOString().slice(0, 10);
+      dailyCount.set(key, 0);
+    }
+
+    (activities as DashboardActivity[]).forEach((act) => {
+      if (!act?.created_at) return;
+      const created = new Date(act.created_at);
+      created.setHours(0, 0, 0, 0);
+      const key = created.toISOString().slice(0, 10);
+      if (dailyCount.has(key)) {
+        dailyCount.set(key, (dailyCount.get(key) || 0) + 1);
+      }
+    });
+
+    const maxCount = Math.max(1, ...Array.from(dailyCount.values()));
+
+    return last7Days.map((day) => {
+      const key = day.toISOString().slice(0, 10);
+      const count = dailyCount.get(key) || 0;
+      const normalized = Math.round((count / maxCount) * 100);
+      const isToday = key === today.toISOString().slice(0, 10);
+      const baseAlpha = isToday ? 0.85 : count > 0 ? 0.55 : 0.3;
+
+      return {
+        day: days[day.getDay()],
+        v: normalized,
+        fill: `rgba(26,115,232,${baseAlpha})`,
+      };
+    });
+  }, [activities]);
 
   const displayActivities: TransactionEntity[] = useMemo(() => {
-    if (!activities || activities.length === 0) {
-      return [
-        {
-          id: "t1",
-          actorName: "Agent Smith",
-          actorTag: "AG",
-          actorBg: "bg-primary",
-          activityType: "CHU KỲ LẤY HÀNG" as ActivityType,
-          activityBg: "bg-sky-100/80",
-          activityText: "text-rose-700",
-          location: "Dãy B, Ô 14",
-          progressPct: 75,
-        },
-      ];
-    }
-    return activities.slice(0, 4).map((act, i) => {
+    if (!activities || activities.length === 0) return [];
+
+    return (activities as DashboardActivity[]).slice(0, 4).map((act, i) => {
       const colors = [
         "bg-primary/80",
         "bg-flow-transfer/80",
@@ -412,6 +460,23 @@ export default function Dashboard() {
       };
     });
   }, [activities]);
+
+  const phoneStock = getCategoryValue(stats?.categoryStock, [
+    "Điện thoại",
+    "Phone",
+  ]);
+  const laptopStock = getCategoryValue(stats?.categoryStock, ["Laptop"]);
+  const accessoryStock = getCategoryValue(stats?.categoryStock, [
+    "Phụ kiện",
+    "Accessory",
+  ]);
+
+  const phoneSold = getCategoryValue(stats?.categorySold, ["Điện thoại", "Phone"]);
+  const laptopSold = getCategoryValue(stats?.categorySold, ["Laptop"]);
+  const accessorySold = getCategoryValue(stats?.categorySold, [
+    "Phụ kiện",
+    "Accessory",
+  ]);
 
   if (loading && !stats)
     return (
@@ -691,13 +756,12 @@ export default function Dashboard() {
                   sub="Thiết bị di động"
                   progressColor="bg-flow-transfer"
                   progressValue={
-                    stats?.categoryStock?.["Điện thoại"]
-                      ? (stats.categoryStock["Điện thoại"] / stats.totalStock) *
-                        100
+                    phoneStock > 0 && (stats?.totalStock ?? 0) > 0
+                      ? (phoneStock / (stats?.totalStock ?? 1)) * 100
                       : 0
                   }
-                  stockCount={stats?.categoryStock?.["Điện thoại"] || "0"}
-                  soldCount={stats?.categorySold?.["Điện thoại"] || "0"}
+                  stockCount={String(phoneStock)}
+                  soldCount={String(phoneSold)}
                   note="Tồn kho thời gian thực"
                 />
               </div>
@@ -709,12 +773,12 @@ export default function Dashboard() {
                   sub="Máy tính xách tay"
                   progressColor="bg-primary"
                   progressValue={
-                    stats?.categoryStock?.["Laptop"]
-                      ? (stats.categoryStock["Laptop"] / stats.totalStock) * 100
+                    laptopStock > 0 && (stats?.totalStock ?? 0) > 0
+                      ? (laptopStock / (stats?.totalStock ?? 1)) * 100
                       : 0
                   }
-                  stockCount={stats?.categoryStock?.["Laptop"] || "0"}
-                  soldCount={stats?.categorySold?.["Laptop"] || "0"}
+                  stockCount={String(laptopStock)}
+                  soldCount={String(laptopSold)}
                   note="Tồn kho thời gian thực"
                 />
               </div>
@@ -726,13 +790,12 @@ export default function Dashboard() {
                   sub="Tai nghe, ốp lưng,..."
                   progressColor="bg-status-info"
                   progressValue={
-                    stats?.categoryStock?.["Phụ kiện"]
-                      ? (stats.categoryStock["Phụ kiện"] / stats.totalStock) *
-                        100
+                    accessoryStock > 0 && (stats?.totalStock ?? 0) > 0
+                      ? (accessoryStock / (stats?.totalStock ?? 1)) * 100
                       : 0
                   }
-                  stockCount={stats?.categoryStock?.["Phụ kiện"] || "0"}
-                  soldCount={stats?.categorySold?.["Phụ kiện"] || "0"}
+                  stockCount={String(accessoryStock)}
+                  soldCount={String(accessorySold)}
                   note="Tồn kho thời gian thực"
                 />
               </div>
@@ -771,9 +834,13 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="divide-y divide-border-soft">
-                    {displayActivities.map((t) => (
-                      <TxnRow key={t.id} txn={t} />
-                    ))}
+                    {displayActivities.length > 0 ? (
+                      displayActivities.map((t) => <TxnRow key={t.id} txn={t} />)
+                    ) : (
+                      <div className="py-8 text-center text-sm text-slate-500">
+                        Chưa có giao dịch gần đây cho kho này.
+                      </div>
+                    )}
                   </div>
                 </div>
               </SurfaceCard>

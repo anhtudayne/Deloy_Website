@@ -55,6 +55,7 @@ interface UIProduct {
   cardBg: string
   categoryId: number | null
   imageUrl: string | null
+  imeis: string[]
 }
 
 interface ModalForm {
@@ -96,13 +97,28 @@ function getPrimaryStatus(inventory: ApiProduct['inventory']): StockStatus {
 /** Factory Method Pattern (Frontend): mapApiProductToUI */
 function mapApiProductToUI(p: ApiProduct): UIProduct {
   const categoryName = p.category?.name ?? 'Unknown'
+  const normalizedCategory = categoryName
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
 
-  const iconTypeMap: Record<string, UIProduct['iconType']> = {
-    'Điện thoại': 'phone',
-    'Phone': 'phone',
-    'Laptop': 'laptop',
-    'Phụ kiện': 'accessory',
-    'Accessory': 'accessory',
+  const resolveIconType = (): UIProduct['iconType'] => {
+    // Ưu tiên category_id để tránh lệch do encoding tên danh mục từ DB.
+    if (p.category?.id === 1) return 'phone'
+    if (p.category?.id === 2) return 'laptop'
+    if (p.category?.id === 3) return 'accessory'
+
+    if (normalizedCategory.includes('dien thoai') || normalizedCategory.includes('phone')) {
+      return 'phone'
+    }
+    if (normalizedCategory.includes('laptop')) {
+      return 'laptop'
+    }
+    if (normalizedCategory.includes('phu kien') || normalizedCategory.includes('accessory')) {
+      return 'accessory'
+    }
+    return 'accessory'
   }
 
   const cardBgMap: Record<string, string> = {
@@ -127,11 +143,12 @@ function mapApiProductToUI(p: ApiProduct): UIProduct {
     status: getPrimaryStatus(p.inventory),
     quantity: getTotalQuantity(p.inventory),
     specs: (p.specifications as ProductSpec) ?? {},
-    iconType: iconTypeMap[categoryName] ?? 'accessory',
+    iconType: resolveIconType(),
     iconColor: iconColorMap[categoryName] ?? 'text-slate-600',
     cardBg: cardBgMap[categoryName] ?? 'bg-slate-100',
     categoryId: p.category?.id ?? null,
     imageUrl: p.image_url,
+    imeis: (p.product_items ?? []).map((item) => item.imei_serial).filter(Boolean),
   }
 }
 
@@ -279,6 +296,25 @@ function ProductCard({ product, onEdit, onDelete }: {
       <div>
         <p className="text-[15px] font-semibold tracking-tight text-slate-900 leading-snug line-clamp-2">{product.name}</p>
         <p className="text-[11px] text-slate-500 mt-0.5 font-mono tracking-wide">SKU: {product.sku}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {product.imeis.slice(0, 2).map((imei) => (
+            <span
+              key={imei}
+              className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-mono text-slate-600"
+              title={imei}
+            >
+              {imei}
+            </span>
+          ))}
+          {product.imeis.length > 2 && (
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+              +{product.imeis.length - 2} IMEI
+            </span>
+          )}
+          {product.imeis.length === 0 && (
+            <span className="text-[10px] text-slate-400">Chưa có IMEI</span>
+          )}
+        </div>
       </div>
 
       {specEntries.length > 3 && (
@@ -514,9 +550,10 @@ const ModalComponent = Modal as typeof Modal & ModalComposition
 // ─────────────────────────────────────────────
 // ClayModal — Compound Component usage (S2)
 // ─────────────────────────────────────────────
-function ClayModal({ state, formOptions, onClose, onSave, saving }: {
+function ClayModal({ state, formOptions, initialProduct, onClose, onSave, saving }: {
   state: ModalState
   formOptions: FormOptions | null
+  initialProduct?: UIProduct | null
   onClose: () => void
   onSave: (form: ModalForm) => Promise<void>
   saving: boolean
@@ -530,12 +567,22 @@ function ClayModal({ state, formOptions, onClose, onSave, saving }: {
 
   useEffect(() => {
     if (state.open) {
+      if (state.mode === 'edit' && initialProduct) {
+        setForm({
+          name: initialProduct.name,
+          sku: initialProduct.sku,
+          category_id: initialProduct.categoryId ?? firstCatId,
+          image_url: initialProduct.imageUrl ?? '',
+          specs: { ...initialProduct.specs },
+        })
+        return
+      }
       setForm({
         name: '', sku: '', category_id: firstCatId,
         image_url: '', specs: {},
       })
     }
-  }, [state.open, firstCatId])
+  }, [state.open, state.mode, initialProduct, firstCatId])
 
   // Strategy Pattern (FE): tra cứu parent category nếu là subcategory — giống H1 fix trên BE
   const selectedCategory = formOptions?.categories.find((c) => c.id === form.category_id)
@@ -551,7 +598,10 @@ function ClayModal({ state, formOptions, onClose, onSave, saving }: {
 
   return (
     <ModalComponent onClose={onClose} saving={saving}>
-      <ModalComponent.Header title="✦ Đăng ký Model Mới" subtitle="Master Data" />
+      <ModalComponent.Header
+        title={state.mode === 'edit' ? '✦ Chỉnh sửa Model' : '✦ Đăng ký Model Mới'}
+        subtitle="Master Data"
+      />
       <ModalComponent.Body>
         <ClayInput required label="Tên sản phẩm" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} placeholder="Ví dụ: iPhone 15 Pro Max" />
 
@@ -590,7 +640,10 @@ function ClayModal({ state, formOptions, onClose, onSave, saving }: {
           </div>
         </div>
       </ModalComponent.Body>
-      <ModalComponent.Footer onSave={() => onSave(form)} saveLabel="✦ Đăng ký Model" />
+      <ModalComponent.Footer
+        onSave={() => onSave(form)}
+        saveLabel={state.mode === 'edit' ? '✦ Lưu thay đổi' : '✦ Đăng ký Model'}
+      />
     </ModalComponent>
   )
 }
@@ -674,6 +727,7 @@ function Toast({ message, type, onClose }: { message: string; type: ToastType; o
 // ─────────────────────────────────────────────
 interface ProductManagementViewProps {
   products: UIProduct[]
+  editingProduct: UIProduct | null
   stats: ApiProductStats | null
   formOptions: FormOptions | null
   modal: ModalState
@@ -703,7 +757,7 @@ interface ProductManagementViewProps {
 }
 
 function ProductManagementView({
-  products, stats, formOptions, modal, deleteTarget,
+  products, editingProduct, stats, formOptions, modal, deleteTarget,
   loadingProducts, loadingStats, saving, deleting, toast, error,
   activeCategory, searchQuery,
   onCategoryChange, onSearchChange, onOpenAdd, onEdit, onDelete,
@@ -873,6 +927,7 @@ function ProductManagementView({
         <ClayModal
           state={modal}
           formOptions={formOptions}
+          initialProduct={editingProduct}
           onClose={onModalClose}
           onSave={onModalSave}
           saving={saving}
@@ -939,6 +994,10 @@ export default function ProductManagement() {
   const { stats, loading: loadingStats, refetch: refetchStats } = useProductStats(selectedWarehouseId ?? undefined)
 
   const products = useMemo(() => rawProducts.map(mapApiProductToUI), [rawProducts])
+  const editingProduct = useMemo(
+    () => products.find((p) => p.id === modal.productId) ?? null,
+    [products, modal.productId],
+  )
 
   // ── Fetch form options ──
   const fetchFormOptions = useCallback(async () => {
@@ -979,18 +1038,25 @@ export default function ProductManagement() {
         // warehouse_id & supplier_id removed.
       }
 
-      await productApiService.createProduct(payload)
-      setToast({ message: `✦ Đã đăng ký Model "${form.name}" thành công!`, type: 'success' })
+      if (modal.mode === 'edit' && modal.productId) {
+        await productApiService.updateProduct(modal.productId, payload)
+        setToast({ message: `✦ Đã cập nhật Model "${form.name}" thành công!`, type: 'success' })
+      } else {
+        await productApiService.createProduct(payload)
+        setToast({ message: `✦ Đã đăng ký Model "${form.name}" thành công!`, type: 'success' })
+      }
       setModal({ open: false, mode: 'add', productId: null })
       refetchProducts()
       refetchStats()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Lỗi khi thêm sản phẩm'
+      const msg = err instanceof Error
+        ? err.message
+        : (modal.mode === 'edit' ? 'Lỗi khi cập nhật sản phẩm' : 'Lỗi khi thêm sản phẩm')
       setToast({ message: msg, type: 'error' })
     } finally {
       setSaving(false)
     }
-  }, [formOptions, refetchProducts, refetchStats])
+  }, [formOptions, modal.mode, modal.productId, refetchProducts, refetchStats])
 
   const handleDelete = useCallback((id: number) => {
     const target = products.find((p) => p.id === id)
@@ -1018,6 +1084,7 @@ export default function ProductManagement() {
     <>
       <ProductManagementView
         products={products}
+        editingProduct={editingProduct}
         stats={stats}
         formOptions={formOptions}
         modal={modal}
@@ -1035,7 +1102,7 @@ export default function ProductManagement() {
         onCategoryChange={setActiveCategory}
         onSearchChange={setSearchQuery}
         onOpenAdd={() => setModal({ open: true, mode: 'add', productId: null })}
-        onEdit={() => setModal({ open: true, mode: 'add', productId: null })}
+        onEdit={(p) => setModal({ open: true, mode: 'edit', productId: p.id })}
         onDelete={handleDelete}
         onModalClose={() => setModal({ open: false, mode: 'add', productId: null })}
         onModalSave={handleSave}

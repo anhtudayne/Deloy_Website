@@ -101,6 +101,12 @@ export interface ProductWithInventory {
     quantity: number;
     status: string;
   }>;
+  product_items: Array<{
+    id: number;
+    imei_serial: string;
+    status: string;
+    warehouse_id: number | null;
+  }>;
 }
 
 export interface CategoryStatsDto {

@@ -26,6 +26,12 @@ export interface ApiProduct {
   created_at: string;
   category: { id: number; name: string } | null;
   inventory: ApiInventory[];
+  product_items: Array<{
+    id: number;
+    imei_serial: string;
+    status: string;
+    warehouse_id: number | null;
+  }>;
 }
 
 export interface ApiProductStats {
